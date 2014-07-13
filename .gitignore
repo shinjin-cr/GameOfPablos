@@ -1,0 +1,17 @@
+# Compiled source #
+###################
+*.pyc
+*.aux
+*.log
+*.gz≈
+ 
+#Ignore Directories#
+Data/
+OldWork/
+ReportWithGraphLang/
+scratch/
+
+
+#OS Files#
+######################
+.DS_Store

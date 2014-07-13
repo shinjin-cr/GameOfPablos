@@ -1,0 +1,35 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1265\cocoasubrtf190
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww10800\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\qc
+
+\f0\fs36 \cf0 \ul \ulc0 Strategies For PoliceUnit Class\ulnone \
+
+\fs24 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural
+
+\i \cf0 + strategy = 0:\
+
+\i0 \
+We move the officer once and then arrest the node she goes to.\
+\
+
+\i + strategy = 1:\
+
+\i0 \
+We move the officer until she cannot move any more.  She is deemed successful if she ends up at the root.  She is deemed unsuccessful if she ends up another leaf.  Her walk is self-avoiding, so the moment she chooses a child of a node instead of its parent, we can stop the process.\
+\
++ strategy = 2:\
+\
+The officer simply arrest the first node she sees.  Very aggressive, indeed!\
+\
+
+\i + strategy = 3:\
+\
+
+\i0 Default
+\i  Degree_Threshold = 4\
+
+\i0 \
+We move the officer until she reaches a node of a certain degree, at which point she arrests the node he is currently at, which has degree bigger than some threshold.  There is a chance her high standards for arrests lead her to the root, at which point the investigation stops and the game complete.  If her search for a high degree node fails in the true sense, then she will end up at a leaf and arrest this leaf.}
