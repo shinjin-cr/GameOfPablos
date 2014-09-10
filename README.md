@@ -15,26 +15,23 @@ GrowthExperiments.py
 This is the driver that collects stats on the growth properties:
 
 1. Degree Distribution
-2. Criminal (node) Density
+2. Criminal (node) Density and Leaf Density
 3. Street Criminal (leaf) Distance
 4. Street Criminal Growth
+5. Total weight
+
+Many of these experiments are then studied as the growth parameters are varied, e.g. initial network configuration and arrival rate
 
 PursuitExperiments.py
 ================================================================================================================================
-This is the driver that collects stats on the Dynamic Game, which is a combination of Pursuit and Growth.
+This is the driver that collects stats on the Dynamic Game, which is a combination of Pursuit and Growth.  The properties are:
 
-Report/
-================================================================================================================================
-.tex files that includes a detailed explanation of the model.
+1. Beat #:= the max arrival rate at which the probability of Police victory = 1.
+2. Cost  := the number of investigations and arrests required for police to win/to loose/on average.
 
-ReportData/
-================================================================================================================================
-Data with plots that appear in Report.  Most of the files were obtained via school machines and plots were then done locally.
+We investigate these properties with respect to the different strategies the Police have.  Again, we vary the parameters to refine
+our understanding of the properties above and the individual strategies.
 
-MuriMeetingPoster/
+GrowthForCluster1.py/GrowthForCluster2.py/PursuitForCluster1.py/PursuitForCluster2.py
 ================================================================================================================================
-This is a poster for the project.
-
-PreliminaryBeamer/
-================================================================================================================================
-Slides done in the nacency of the project.  More graph theoretic language.
+These are the jobs run on the school cluster.  Mainly here for record.

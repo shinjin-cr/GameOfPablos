@@ -1,5 +1,5 @@
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import os
 from random import choice 
 from numpy.random import binomial
@@ -8,7 +8,7 @@ import random
 import networkx as nx
 from numpy.random import poisson as pois
 import types
-import cProfile
+
 
 ##########################################################################################################################################################################
 def constant_arrival(*args):
@@ -19,7 +19,9 @@ def constant_arrival(*args):
     return f
 
 def no_more_leaves(self, node):
-    """1/(distance_to_closest_leaf+1)"""
+    """
+    1/(distance_to_closest_leaf+1)
+    """
     return 1./(self.node[node]['distance_to_closest_leaf']+1.)
 
 def height_preference(self, node):
@@ -64,36 +66,12 @@ class PTree(nx.DiGraph):
             None
         --------------------------------------------------------------------------
         Description:
-        
-            We mention the relevant immutable traits (can be changed, but should not be):
-                
-                self.arrival_parameters (tuple)                   = (k,); usually constant for distribution below
-                                                                    tuple format allows for built in probability distributions in scipy
-                self.arrival_distribution (function)              = this is just a constant function for the relevant model; earlier models
-                                                                    permitted this to be a Poisson or even Binomial distribution
-                self.max_allowable_nodes (int)                    = stop growth at this integer as we assume this goes to infinity
-                self.max_nodes_reached (bool)                     = True or False whether total number of nodes currently exceeds 
-                                                                    max allowable nodes
-                self.prefenerence (function)                      = see preference comments below
+            We mention a few relevant traits:
             
-            We mention the relevant (mutable) traits--here by mutable we don't mean those changed by the user (don't do it!) more as 
-            in the traits change over time as the network grows or shrinks.  The traits of the graph in general should be used by the
-            "getter" functions:
-            
-                self.node[node]['height']  (int)                  = depth of node/number of edges between node and root
-                self.node[node]['distance_to_closest_leaf'] (int) = minimum number of edges between node and descendent leaf
-                self.node[node]['shortest_path_to_root'] (list)   = list beginning at node and ending at the root (0)--inclusive!
-                self.timestep (int)                               = each time the tree is altered we adjust timestep (for
-                                                                    visualization)
-                self.the_leaf_distance (list)                     = the list of maximum distances to the leaf (max of 
-                                                                    self.node[node]['distance_to_closest_leaf'] for each node)
-                self.weight_tracker (list)                        = total weight of the network
-                
-            Internal Traits are the ones used for book-keeping within the object itself:
-                
-                self.leaves_removed (list)                        = these are the current leaves that are removed
-                self.node_count (int)                             = should be thought of as node counter; this is the total number of nodes
-                                                                    that have been in the network for its entire life
+                self.node[node]['height']                   = depth of node/number of edges between node and root
+                self.node[node]['distance_to_closest_leaf'] = minimum number of edges between node and descendent leaf
+                self.timestep                               = each time the tree is altered we adjust timestep (for
+                                                              visualization)
         """
         nx.DiGraph.__init__(self)
         self.add_node(0)
@@ -106,6 +84,9 @@ class PTree(nx.DiGraph):
         self.leaves = [0]
         self.new_nodes = [0]
         self.nodes_added = [1]
+        self.max_height = 0
+        self.min_height = 0
+        self.avg_height = 0
         self.node_count = 1
         self.timestep = 0
         self.weights = []
@@ -113,13 +94,6 @@ class PTree(nx.DiGraph):
         self.number_of_leaves_per_timestep = [1]
         self.weight_tracker = [1]
         self.the_leaf_distance = [0]
-        self.node[0]['shortest_path_to_root'] = [0]
-        #########################################################
-        
-        #GRAPH HEIGHT###################################
-        #self.max_height = 0
-        #self.min_height = 0
-        #self.avg_height = 0
         #########################################################
         
         #GRAPH INDEPENDENT TRAITS################################
@@ -157,36 +131,28 @@ class PTree(nx.DiGraph):
                 self.nodes_added = [height]
             else:
                 self.nodes_added = [(degree**(height+1) - 1)/(degree - 1)]
-            
-            #GRAPH HEIGHT###################################################
-            #self.max_height, self.min_height, self.avg_height  = (height,)*3
-            ################################################################
-            
+            self.max_height, self.min_height, self.avg_height  = (height,)*3
             self.node[0]['distance_to_closest_leaf'] = height
             for k in range(height):
                 nodes_to_update = self.levels[-1]
                 level_temp = []
-                dist_to_closest_leaf_temp = height - k -1
+                dist_to_closest_leaf_temp = self.max_height - k -1
                 for new_parent in nodes_to_update:
                     for j in range(degree):
                         child = self.node_count
                         self.add_edge(new_parent, child)
                         level_temp.append(child)
                         self.node[child]['height'] = k+1
-                        self.node[child]['shortest_path_to_root'] = [child]+self.node[new_parent]['shortest_path_to_root']
                         self.node[child]['distance_to_closest_leaf'] = dist_to_closest_leaf_temp
                         self.node_count +=1
                 self.levels.append(level_temp)
             self.leaves = list(self.levels[-1])
+            
+            weights = [self.preference(node1) for node1 in self.nodes()]
+            total_weight= sum(weights)
+            self.weight_tracker[0] = total_weight
             self.the_leaf_distance[0] = height    
             
-         
-        
-        #TOTAL WEIGHT!################################################    
-        self.weights = [self.preference(node1) for node1 in self.nodes()]
-        self.total_weight = sum(self.weights)
-        self.weight_tracker[0] = self.total_weight
-        #############################################################  
                 
         
         #########################################################
@@ -227,7 +193,8 @@ class PTree(nx.DiGraph):
             to each node and then we select a node accordingly. 
         """
         nodes = self.nodes()
-        total_weight= self.total_weight
+        self.weights = [self.preference(node) for node in nodes]
+        total_weight= sum(self.weights)
         arrow = np.random.uniform(0, total_weight)
         temp_sum = 0
         for index in range(self.number_of_nodes()):
@@ -260,7 +227,7 @@ class PTree(nx.DiGraph):
         #ARRIVAL################################################################################################
         number_of_new_nodes = self.arrival()
         self.nodes_added.append(number_of_new_nodes)
-        self.new_nodes = []   #For Visualization
+        self.new_nodes = []  #For Visualization
         ########################################################################################################
         
         #NEW NODES ASSIGNED PARENT##############################################################################
@@ -275,10 +242,11 @@ class PTree(nx.DiGraph):
             child = int(self.node_count)
             edges_to_add.append((parent, child))
             self.node_count +=1
-            self.new_nodes.append(child)  #For Visualization
+            self.new_nodes.append(child) #For Visualization
         ####################################################
         
         #UPDATE TREE############################################################################################
+        
         
         #TRAITS##############################################
         self.add_edges_from(edges_to_add)
@@ -295,36 +263,27 @@ class PTree(nx.DiGraph):
             except IndexError:
                 self.levels.append([])
                 self.levels[child_height].append(child)
-            
-            #PATHS##################################################
-            self.node[child]['shortest_path_to_root'] = [child] + self.node[parent]['shortest_path_to_root']
-            self.node[child]['distance_to_closest_leaf'] = 0
-            ########################################################
-            
-            #HEIGHTS#######################################################
-            #heights = nx.get_node_attributes(self, 'height').values()
-            #heights.remove(0) #Pablo's Height
-            #self.max_height = max(heights)
-            #self.min_height = min(heights)
-            #self.avg_height = np.mean(heights)
-            ##################################################################
-            
+            heights = nx.get_node_attributes(self, 'height').values()
+            heights.remove(0) #Pablo's Height
+            self.max_height = max(heights)
+            self.min_height = min(heights)
+            self.avg_height = np.mean(heights)
         ####################################################
         
         #DISTANCE TO LEAF###################################
         """
-        We take leaves of ordered by height in decreasing order and then 
-        update the distance to the leaves using a breadth-first search.
+        We take leaves of ordered by height in increasing order and then 
+        naively update all leaves from root to this leaves.  This permits 
+        the update accurately, though likely not the most efficiently.
         """ 
-        new_nodes_sorted_by_height = sorted(self.new_nodes, key = lambda node: self.node[node]['height'])
-        traversal_dictionary = {node: False for node in self.nodes()}########################!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        for new_node in new_nodes_sorted_by_height:
-            for node_to_update in self.node[new_node]['shortest_path_to_root']:
-                if traversal_dictionary[node_to_update]:
-                    break
-                a_near_leaf = self.bfs_searching_for_near_leaf(node_to_update)
-                self.node[node_to_update]['distance_to_closest_leaf'] = self.node[a_near_leaf]['height'] - self.node[node_to_update]['height']
-                traversal_dictionary[node_to_update] = True
+        leaves_sorted_by_height = sorted(self.leaves, key = lambda node: -self.node[node]['height'])
+        for leaf in leaves_sorted_by_height:
+            temp = 0
+            path = nx.shortest_path(self, source=0, target= leaf)
+            path.reverse()
+            for node in path:
+                self.node[node]['distance_to_closest_leaf'] = temp
+                temp+=1
         ####################################################
         
         #NUMBER OF LEAVES AFTER ARRIVAL AND LEAVES ADDED########################################################
@@ -332,9 +291,9 @@ class PTree(nx.DiGraph):
         ########################################################################################################
         
         #WEIGHT TRACKER#####################################
-        self.weights = [self.preference(node1) for node1 in self.nodes()]
-        self.total_weight= sum(self.weights)
-        self.weight_tracker.append(self.total_weight)
+        weights = [self.preference(node1) for node1 in self.nodes()]
+        total_weight= sum(weights)
+        self.weight_tracker.append(total_weight)
         ####################################################
         
         #The Leaf Distance Tracker#####################################
@@ -426,131 +385,80 @@ class PTree(nx.DiGraph):
         self.remove_nodes_from(nodes_removed)
         ###############################################################
         
-        #UPDATE LEAVES (PT. 2) AND DISTANCE TO LEAVES#############################
+        #UPDATE LEAVES (PT. 2) AND DISTANCE TO LEAVES##################
         """
         We have to update the parent of the subtree, namely if the
         root of the subtree was the parent's only child, then he
         now is a leaf.  Stated another way, if the parent's out
         degree == 1 before the removal, then he is now a leaf.
         """
-        #UPDATE PARENT OF REMOVED NODE FIRST##################
         if self.out_degree(parent) == 0:
             self.leaves.append(parent)
             self.node[parent]['distance_to_closest_leaf'] = 0
         else:
             self.node[parent]['distance_to_closest_leaf'] = \
             min([(self.node[child]['distance_to_closest_leaf'] +1) for child in self.successors(parent)])
-        #######################################################
-        
-        #UPDATE ALL OTHER NODES FROM PARENT TO ROOT############
         if parent == 0:
             pass
         else:
-            path = list(self.node[parent]['shortest_path_to_root'])
-            del path[0] #delete the parent since we already updated it
+            path = nx.shortest_path(self, source=0, target= parent)
+            path.reverse()
+            del path[0]
             for node in path:
                 self.node[node]['distance_to_closest_leaf'] = \
-                min([(self.node[child]['distance_to_closest_leaf'] +1) for child in self.successors(node)])
-        #######################################################
-                
-        ##############################################################################
+                min([(self.node[child]['distance_to_closest_leaf'] +1) for child in self.successors(node)])        
+        
         
         #UPDATE GLOBAL HEIGHTS##########################################
         """
         Each node has a height, but so does the tree.  This is updated
         here.
         """
-        #heights = nx.get_node_attributes(self, 'height').values()
-        #heights.remove(0) #Pablo's Height
-        #if heights == []:
-        #    self.max_height, self.min_height, self.avg_height = (0, 0, 0)
-        #else:
-        #    self.max_height = max(heights)
-        #    self.min_height = min(heights)
-        #    self.avg_height = np.mean(heights)
+        heights = nx.get_node_attributes(self, 'height').values()
+        heights.remove(0) #Pablo's Height
+        if heights == []:
+            self.max_height, self.min_height, self.avg_height = (0, 0, 0)
+        else:
+            self.max_height = max(heights)
+            self.min_height = min(heights)
+            self.avg_height = np.mean(heights)
         ###############################################################
         
-        ###############################################################
-        self.weights = [self.preference(node1) for node1 in self.nodes()]
-        ###############################################################
         
-    ####################################################################################################
-    
-    #ALGORITHMS########################################################################################
-    def bfs_searching_for_near_leaf(self, node):
-        """
-        --------------------------------------------------------------------------
-        Input:
-            self
-            node (int)   the node on the graph that begin our search
-        --------------------------------------------------------------------------
-        Output:
-            child (int)  the child of the node that represents that is one of the nodes
-                         of minimum distance
-        --------------------------------------------------------------------------
-        Description:
-           By doing a breadth first search, we look for a leaf closest to the node inputted.
-        """
-        if self.out_degree(node)==0:
-            return node
-        nodes_to_traverse = [node]
-        for parent in nodes_to_traverse:    
-            for child in self.successors(parent):
-                if self.out_degree(child) == 0:
-                    return child
-                else:
-                    nodes_to_traverse.append(child)
-    
     ####################################################################################################
     
     #VISUALIZATION######################################################################################
     def visual(self, PU = None): 
         """
         IMPORTANT: the zen of visualization--call visual, then adjust time-step
-        externally.  For instance,
-        
-        >> G.Ptree()
-        >> G.visual()
-        >> G.do_stuff_that_changes_G()
-        >> G.timestep += 1
+        externally.
         
         --------------------------------------------------------------------------
         Input:
             self
-            PU (PoliceUnit)       This is a pointer to the object created below.
-                                  The default is None.  The function then accesses
-                                  the attributes of the PoliceUnit object.
         --------------------------------------------------------------------------
         Output:
-            Pdfs                  Saved to Directory "Data" in the same file as script        
+            Pdfs        Saved to Directory "Data" in the same file as script        
         --------------------------------------------------------------------------
         Description:
             This uses the networkx draw() function to draw the graph and dots
             library for making hierarchal structure clear. 
-        
         """
-        
-        #############################################################################################################################################
         print self.timestep
-        #############################################################################################################################################
         
-        #Lists that are collected from PU object###################################################################################################### 
         investigated                              = []
         list_of_nodes_occupied_by_officer         = []
         removed_nodes                             = []
-        #############################################################################################################################################
         
-        #############################################################################################################################################
+        
         if PU == None:
             pass
         else:
             removed_nodes[:]                      = PU.removed_nodes
             list_of_nodes_occupied_by_officer[:]  = [officer1.get_current_node() for officer1 in PU.officers]
             investigated                          = PU.investigated    
-        #############################################################################################################################################        
+                
         
-        #COLORS######################################################################################################################################
-        fig = plt.figure()
         plt.rc('font',**{'family':'serif'})
         color_dictionary = {node: (      '#CC0000'   if node in removed_nodes
                                     else '#FF66FF'   if node in list_of_nodes_occupied_by_officer
@@ -559,65 +467,56 @@ class PTree(nx.DiGraph):
                                     else '#00CC66') 
                                     for node in self.nodes()
                             }
-        colors = [color_dictionary.get(node, '#FFFFFF') for node in self.nodes()]
-        #############################################################################################################################################
         
-        
-        #WEIGHTS#####################################################################################################################################
-        self.weights = [self.preference(node) for node in self.nodes()]
+        nodes = self.nodes()
+        self.weights = [self.preference(node) for node in nodes]
         total_weight= sum(self.weights)
-        #############################################################################################################################################
         
-        #LABELS#######################################################################################################################################
-        label_dictionary = { node: \
-                                   ''
-                                   +'%s\n'%str(self.node[node]['shortest_path_to_root'])\
-                                   +r'$v_{%s}$'%str(node) + '\n'\
-                                   #+r'$w_{%s} = %.5f$'%(self.timestep , self.weights[k]) \
-                                   #+'%4d'%self.node[node]['distance_to_closest_leaf']
-                                   #+r'$\mathbb{P}_{%s} = %.5f$'%(self.timestep +1, self.weights[node]/total_weight)
-                          for k, node in enumerate(self.nodes())
-                          } #if node !=0 else 'Eve' v_{%s}$
-        #############################################################################################################################################
-        
-        
-        #SHAPES#######################################################################################################################################
-        shape_dictionary = {node: (      'p'   if node in removed_nodes
-                                    else '>'         if node in list_of_nodes_occupied_by_officer
-                                    else '<'         if node in investigated
-                                    else 's'         if node in self.new_nodes
-                                    else 'o') 
-                                    for node in self.nodes()
-                            }
-        shapes = [shape_dictionary.get(node, 'o') for node in self.nodes()]
-        #############################################################################################################################################
-        
-        #SIZE########################################################################################################################################
+        #label_dictionary = { node: \
+        #                            ''
+        #                            #+r'$v_{%s}$'%str(node) \
+        #                            #+'\n'
+        #                            +r'$w_{%s} = %.5f$'%(self.timestep , self.weights[node])\
+        #                            +'\n'
+        #                            +r'$\mathbb{P}_{%s} = %.5f$'%(self.timestep +1, self.weights[node]/total_weight)
+        #                   for node in self.nodes()
+        #                   } #if node !=0 else 'Eve' v_{%s}$
+        colors = [color_dictionary.get(node, '#FFFFFF') for node in self.nodes()]
+        shape_dictionary = {}
+        for node in self.nodes():
+            if node in removed_nodes:
+                shape_dictionary.setdefault('removed', []).append(node)
+            elif node in list_of_nodes_occupied_by_officer:
+                shape_dictionary.setdefault('occupied_by_officer', []).append(node)
+            elif node in investigated:
+                shape_dictionary.setdefault('investigated', []).append(node)
+            elif node in self.new_nodes:
+                shape_dictionary.setdefault('new_nodes', []).append(node)
+            else:
+                shape_dictionary.setdefault('generic', []).append(node)
+            
+        list_of_node_types = ['new_nodes', 'generic', 'removed', 'occupied_by_officer', 'investigated']
+        node_shapes        = [ 's'       , 'o'      , '<'      ,   '*'               , 'd'            ]
+        node_colors        = [ '#CCFF66' , '#00CC66', '#CC0000', '#FF66FF',            '#99FFFF' ] 
+    
         node_sizes_list = [200*3 if node!=0 else 400*3 for node in self.nodes()] #Everthing Else
         #node_sizes_list = [10000 if node!=0 else 10000 for node in self.nodes()] #FOR PAPER WRITEUPS
-        #############################################################################################################################################
-        
-        
-        #DRAW########################################################################################################################################
         pos=nx.graphviz_layout(self,prog='dot')
-        nx.draw(self,
-                pos,
-                
-                #labels##################
-                with_labels=True,
-                labels = label_dictionary,
-                ###########################
-                
-                arrows=False, 
-                node_color = colors,
-                font_family = 'serif',
-                font_size = 8,
-                node_size = node_sizes_list,
-                #node_shape = shapes
-                )
-        #############################################################################################################################################
-        
-        #CHANGING DIRECTORIES########################################################################################################################
+        fig = plt.figure()
+        plt.axis('off')
+        for node_type in list_of_node_types:
+            nx.draw_networkx_nodes(self,
+                                   pos,
+                                   nodelist = shape_dictionary.get(node_type, []),
+                                   node_shape = node_shapes.pop(0),
+                                   with_labels=False,
+                                   node_color = node_colors.pop(0),
+                                   font_family = 'serif',
+                                  )
+        nx.draw_networkx_edges(self, pos, arrows= False)
+        ###############################################
+        #CHANGING DIRECTORIES##########################
+        ###############################################
         """
         We create two directories Data > EvolutionPics + /date/ within the same 
         file as the python script.  We then can save all plots, 
@@ -635,12 +534,11 @@ class PTree(nx.DiGraph):
         if not os.path.exists(os.getcwd()+dir_name2):
             os.makedirs(os.getcwd()+dir_name2)
         os.chdir(os.getcwd() + dir_name2)
-        ##################################################################################################################################################
-        
-        ##################################################################################################################################################
+        ###########################################################
+        ###########################################################
         filename_for_pdf = '/'+ str(self.timestep)+'.pdf'
         plt.savefig( os.getcwd() + filename_for_pdf , format="pdf" )
-        ##################################################################################################################################################
+       
     
     def seed_visual(self):
         """
@@ -662,7 +560,7 @@ class PTree(nx.DiGraph):
         """
         Visualize the growth
         """
-        while(self.number_of_nodes() < self.max_allowable_nodes ):
+        while(self.number_of_nodes() < self.max_allowable_nodes ):#and self.max_height < self.max_allowable_height):
             self.add_nodes_with_visuals()
     ####################################################################################################
     
@@ -682,11 +580,6 @@ class PTree(nx.DiGraph):
         Output: copy of (list) self.leaves
         """
         return list(self.leaves)
-    def get_number_of_leaves(self):
-        """
-        Output: the # of leaves in the network
-        """
-        return len(self.leaves)
     def get_number_of_leaves_per_timestep(self):
         return list(self.number_of_leaves_per_timestep)
     ####################################################################################################
@@ -705,14 +598,10 @@ class PTree(nx.DiGraph):
         print 'Leaves: ', self.leaves
         print 'Number of Nodes Added: ', self.nodes_added
         print 'New Nodes: ', self.new_nodes
+        print 'Max Height: ', self.max_height
+        print 'Min Height: ', self.min_height
+        print 'Avg Height: ',self.avg_height
         print 'Node Count: ',self.node_count
-        
-        #HEIGHTS############################################
-        #print 'Max Height: ', self.max_height
-        #print 'Min Height: ', self.min_height
-        #print 'Avg Height: ',self.avg_height
-        ####################################################
-        
         print '############'
         
     
@@ -743,17 +632,17 @@ class Officer(object):
             The officer begins on a leaf and then either moves or arrests.  The
             strategy is specified not here, but in the PoliceUnit.  Relevant
             attributes:
-                self.path (list)              = The nodes the police traverse.  This
+                self.path (list)                The nodes the police traverse.  This
                                                 is relevant since we assume the
-                                              = officers random walk is self-avoiding.
+                                                officers random walk is self-avoiding.
                 self.current_node (int)         The current node the police officer
                                                 is at.
                 self.ptree (PTree)              The network the officer investigates
-                self.hope_of_reaching_root    = Assuming the random walk the officer
+                self.hope_of_reaching_root      Assuming the random walk the officer
                 (bool)                          makes is self-avoiding the moment he
                                                 moves away from the parent of the
                                                 current node, he is doomed to fail.
-                self.investigation_must_end   = When the investigation reaches another
+                self.investigation_must_end     When the investigation reaches another
                 (bool)                          leaf.  That is to say, the investigation
                                                 has reached its conclusion.  We will
                                                 try not to run a random walk to its conclusion
@@ -786,11 +675,11 @@ class Officer(object):
         #############################################################
         
         #############################################################
-        parent = parent_list[0]                  #tree has unique parent
-        neighbors = children_list + parent_list  #neighbors are parents and children
-        if len(self.path) >= 2:                  #if we have made at least one move
-            neighbors.remove(self.path[-2])      #remove the last node visited from neighbors
-        if len(neighbors) == 0:                  #after removal if neibor set is non-empty continue
+        parent = parent_list[0]
+        neighbors = children_list + parent_list
+        if len(self.path) >= 2:
+            neighbors.remove(self.path[-2])
+        if len(neighbors) == 0:
             self.investigation_must_end = True
             return 
         #############################################################
@@ -798,7 +687,7 @@ class Officer(object):
         #############################################################
         next_node = random.choice(neighbors)
         if next_node != parent:
-            self.hope_of_reaching_root = False  #walk is self-avoiding! and tree has only one path to root
+            self.hope_of_reaching_root = False
         self.path.append(next_node)
         self.current_node =  next_node
         #############################################################
@@ -840,7 +729,7 @@ class Officer(object):
         Current Node: self.current_node (int)
         Hope: self.hope_of_reaching_root
         """
-        return 'Current Node: ' + str(self.get_current_node()) +'\n' + 'Hope: '+ str(self.get_hope())
+        return 'Current Node: ' +str(self.get_current_node()) +'\n' + 'Hope: '+ str(self.get_hope())
     ##################################################################################
     
 ##########################################################################################################################################################################
@@ -854,15 +743,8 @@ class PoliceUnit(object):
     
     There is a strategy.txt  in the same directory as this .py file that  will describe 
     the strategies implemented here.   They are indexed by integers.
-    
-    In terms of the current model, we really only need one officer.  However, this object
-    controls the strategy the officer employs.  This is the most important aspect for pur-
-    suit experiments.
-    
-    The Strategies.txt describes the strategies implemented here in full and have 
-    a full dictionary between the variables used here and the paper.
     """
-    def __init__(self, ptree, strategy = 0, degree_threshold = None, officers_sent_out = None, number_of_investigations_for_strategy_SI = None, cost_experiment = False):
+    def __init__(self, ptree, strategy = 0, degree_threshold = None, officers_sent_out = None, number_of_investigations_for_strategy_SI = None):
         """
         --------------------------------------------------------------------------
         Input:
@@ -884,22 +766,12 @@ class PoliceUnit(object):
                 self.ptree (PTree)                  = the criminal network being inspected
                 self.removed_nodes (list of ints)   = list of nodes that will be removed
                 self.investigated (list of ints)    = list of nodes that are being investigated
-                                                      by the officer that is CURRENTLY walking/
+                                                      by the officer that is CURRENTLYwalking/
                                                       arresting
                 self.root_found (bool)              = Boolean value when one officer has reached
                                                       the root
-                self.officers_sent_out (int)        = The number of officers that are sent out;
-                                                      again for the relevant model, this is 
-                                                      simply 1.
-                self.cost_experiment (bool)         = Normally, when we perform a pursuit with strategy 1
-                                                      (only investigations/S_I), we do not need to continue
-                                                      investigating if the officer takes a walk away from the root
-                                                      instead of towards it.  However, when analyzing the total 
-                                                      number of investigations (aka cost), we have to include
-                                                      this because the officer in the model, does not 
-                                                      know the global structure and will be doomed to investigate
-                                                      until he cannot any longer.
-         """
+                self.officers_sent_out (int)        = 
+        """
         self.officers = []
         self.strategy = strategy
         if degree_threshold == None:
@@ -907,20 +779,17 @@ class PoliceUnit(object):
         else:
             self.degree_threshold = degree_threshold
         if number_of_investigations_for_strategy_SI == None:
-            self.number_of_investigations_for_strategy_SI = 1
+            self.number_of_investigations_for_strategy_SI = 4
         else:
             self.number_of_investigations_for_strategy_SI = number_of_investigations_for_strategy_SI 
         self.ptree = ptree
         self.removed_nodes = []
         self.investigated = []
-        self.total_investigations = 0
-        self.total_arrests  = 0
         self.root_found = False
         if officers_sent_out == None:
-            self.officers_sent_out = 1 #self.ptree.arrival_parameters[0] - 1
+            self.officers_sent_out = 1#self.ptree.arrival_parameters[0] - 1
         else:
             self.officers_sent_out = officers_sent_out
-        self.cost_experiment = cost_experiment
     
     
     
@@ -978,7 +847,7 @@ class PoliceUnit(object):
         --------------------------------------------------------------------------
         Input:
             self
-            number_of_officers (int)      = Default value is the (arrival rate -1)
+            number_of_officers (int)        Default value is the (arrival rate -1)
                                             of where the growth process is the
                                             new nodes added at each timestep for 
                                             growth.
@@ -999,15 +868,13 @@ class PoliceUnit(object):
         ###########################################################################
         
         #APPEND OFFICERS TO SELF.OFFICERS##########################################
-        leaves_to_be_investigated = random.sample(self.ptree.get_leaves(), number_officers_sent_out) #picking without replacement
+        leaves_to_be_investigated = random.sample(self.ptree.get_leaves(), number_officers_sent_out)
         for leaf in leaves_to_be_investigated:
             self.officers.append(Officer(self.ptree, leaf))
         ###########################################################################
         
     def go_for_root(self):
         """
-        THESE ARE THE STRATEGIES IMPLEMENTED.  See the Strategies.txt for details.
-        
         --------------------------------------------------------------------------
         Input:
             self
@@ -1025,18 +892,11 @@ class PoliceUnit(object):
             
             Also, a good practice for implementing new stragies is to implement
             it in go_for_root_with_visual() and then copy it to this portion after.
-            
-            Strategy 1 requires a slight modifcation depending on whether a cost experiment is
-            performed.
         """
         
+    
         if self.strategy == 0:
-            """
-            Investigate self.number_of_investigations_for_strategy_SI times
-            and then arrest.
             
-            If you end at leaf, stop and the investigation stops.
-            """
             #INIALIZE ATTRIBUTES###############################
             self.removed_officers =[]
             self.ptree.new_nodes = []
@@ -1044,9 +904,6 @@ class PoliceUnit(object):
             
             #SELECT NODES TO INVESTIGATE#######################
             self.get_criminals_on_street()
-            for officer in self.get_officers():
-                self.total_investigations += 1
-                self.investigated += officer.get_path()
             ###################################################
             
             #EACH OFFICER MOVES################################
@@ -1057,36 +914,24 @@ class PoliceUnit(object):
                     for k in range(self.number_of_investigations_for_strategy_SI):
                         #INVESTIGATE#########################################
                         officer.investigate()
-                        self.total_investigations += 1
                         self.investigated = officer.get_path()
                         #####################################################
                 
                         #####################################################
                         if officer.get_current_node() == 0:
-                            self.total_arrests += 1
                             self.root_found = True
+                            ##print "ROOT FOUND"
                             return
                         #####################################################
                         
                         #####################################################
-                        if self.ptree.out_degree(officer.get_current_node())==0:
-                            #leaves are not arrested so that resembles investigation
-                            #strategy for large number of investigations
-                            
-                            #NO MORE INVESTIGATION###############################
-                            self.investigated = []
-                            #####################################################
-                        
-                            #REMOVE OFFICER######################################
-                            self.officers.remove(officer)
-                            #####################################################
-                            
-                            return
+                        if officer.get_current_node() in self.ptree.get_leaves():
+                            break
+                            #print "ROOT FOUND"
                         #####################################################
                     
                 
                     #BEFORE ARREST#######################################
-                    self.total_arrests += 1
                     self.remove_extra_officers_before_arrest(officer)
                     #####################################################
                 
@@ -1094,75 +939,44 @@ class PoliceUnit(object):
                     #AFTER ARREST########################################
                     officer.arrest()
                     #####################################################
-                    
         elif self.strategy ==1:
             """
-            Only investigate.  To optimize we have an officer characteristic that is officer.get_hope()
-            if there is still a path to the root assuming self-avoidance.  If not, then this is False and if
-            so, then True.  The cost experiment requires us to do a complete round and hence the cotrol flow
-            statements related to this.  This is the only strategy where this is relevant.
-            
-            For this specific case, we include self.cost_experiment (bool)
+            Only walk
             """
             self.ptree.new_nodes = []
             self.removed_officers =[]  #Not used here, but kept for continuity 
             
+            
             #GET NEW CRIMINALS TO INVESTIGATE####################
             self.get_criminals_on_street()
-            for officer in self.get_officers():
-                self.total_investigations += 1
-                self.investigated += officer.get_path()
             #####################################################
             
         
-            for officer in self.get_officers():
-                if not self.cost_experiment:
+            for officer in self.get_officers():                   
+                while(officer.get_hope() and officer.current_node != 0):
                 
-                    while(officer.get_hope() and officer.current_node != 0):
-                
-                        #INVESTIGATE#########################################
-                        officer.investigate()
-                        self.total_investigations +=1
-                        self.investigated = officer.get_path()
-                        #####################################################
-            
-            
-                    #WHY DID THE INVESTIGATION STOP!######################
-                    if officer.get_current_node() == 0:
-                        self.total_arrests += 1
-                        self.root_found = True
-                        return
-                    else:
-                        self.investigated = []
-                        self.officers.remove(officer)
+                    #INVESTIGATE#########################################
+                    officer.investigate()
+                    self.investigated = officer.get_path()
                     #####################################################
-                
+            
+            
+                #WHY DID THE INVESTIGATION STOP!######################
+                if officer.get_current_node() == 0:
+                    self.root_found = True
+                    #print "ROOT FOUND"
+                    return
                 else:
-                    while(officer.get_current_node() != 0 and (self.ptree.out_degree(officer.get_current_node()) != 0 or len(self.investigated) == 1)):
-                            
-                        #INVESTIGATE#########################################
-                        officer.investigate()
-                        self.total_investigations +=1
-                        self.investigated = officer.get_path()
-                        #####################################################
-        
-        
-                    #WHY DID THE INVESTIGATION STOP!######################
-                    if officer.get_current_node() == 0:
-                        self.total_arrests += 1
-                        self.root_found = True
-                        return
-                    else:
-                        self.investigated = []
-                        self.officers.remove(officer)
-                    #####################################################
+                    self.investigated = []
+                    self.officers.remove(officer)
+                #####################################################
             
                 
         
                 
         elif self.strategy == 2:
             """
-            Only Arrest (now deprecated by straegy 0 with self.number_of_investigations_for_strategy_SI = 0)
+            Only Arrest
             """
             #INITIALIZE ATTRIBUTES################################
             self.ptree.new_nodes = []
@@ -1171,8 +985,6 @@ class PoliceUnit(object):
 
             #GET NEW CRIMINALS TO INVESTIGATE####################
             self.get_criminals_on_street()
-            for officer in self.get_officers():
-                self.investigated += officer.get_path()
             #####################################################
             
             
@@ -1201,8 +1013,7 @@ class PoliceUnit(object):
             Degree Threshold.  We arrest only when the total
             degree exceeds this threshold.  We view the police
             as slightly spiteful people, so when they complete
-            a walk and end up at a leaf, they do nothing and must
-            wait until the next round.
+            a walk and end up at a leaf, they arrest that leaf.
             
             Also note that the degree threshold is a total degree
             calculation including the previous edge the police
@@ -1216,9 +1027,6 @@ class PoliceUnit(object):
 
             #GET NEW CRIMINALS TO INVESTIGATE####################
             self.get_criminals_on_street()
-            for officer in self.get_officers():
-                self.total_investigations += 1
-                self.investigated += officer.get_path()
             #####################################################
             
             
@@ -1226,51 +1034,37 @@ class PoliceUnit(object):
                 if officer in self.removed_officers:
                     pass
                 else:                    
+                    
                     while( officer.get_current_node() != 0   and \
                            self.ptree.degree(officer.get_current_node()) < self.degree_threshold and \
                            officer.investigation_must_end == False 
                          ):
-                         
-                        #INVESTIGATE############################################
-                        self.total_investigations += 1
+                        #INVESTIGATE#########################################
                         officer.investigate()
                         self.investigated = officer.get_path()
-                        ########################################################
+                        #####################################################
                         
                     
-                    #ROOT FOUND!################################################
+                    #####################################################
                     if officer.get_current_node() == 0:
-                        self.total_arrests += 1
                         self.root_found = True
+                        #print "ROOT FOUND"
                         return
-                    #############################################################
+                    #####################################################
                     
-                    #REACHED LEAF################################################
-                    elif self.ptree.out_degree(officer.get_current_node()) == 0 and len(self.investigated) != 1: #if q ==1, then leaves will ALWAYS 
-                                                                                                                 #meet our degree threshold too so we should arrest
-                                                                                                                 #the first node we see, which will be a leaf.
-                        
-                        #NO MORE INVESTIGATION###############################
-                        self.investigated = []
-                        #####################################################
-                        
-                        #REMOVE OFFICER######################################
-                        self.officers.remove(officer)
-                        #####################################################
-                    
-                    #HIGH DEGREE################################################
                     else:
                         """
-                        This strategy removes high degree nodes! 
+                        This strategy will either remove a leaf or a high
+                        degree node
                         """
                         #NO MORE INVESTIGATION###############################
                         self.investigated = []
                         #####################################################
                         
                         #BEFORE ARREST#######################################
-                        self.total_arrests += 1
                         self.remove_extra_officers_before_arrest(officer)
                         #####################################################
+                    
                     
                         #AFTER ARREST########################################
                         officer.arrest()
@@ -1307,9 +1101,6 @@ class PoliceUnit(object):
 
             #GET NEW CRIMINALS TO INVESTIGATE####################
             self.get_criminals_on_street()
-            for officer in self.get_officers():
-                self.total_investigations += 1
-                self.investigated += officer.get_path()
             #####################################################
             
             #VISUAL##############################################
@@ -1326,10 +1117,9 @@ class PoliceUnit(object):
                         
                         #INVESTIGATE#########################################
                         officer.investigate()
-                        self.total_investigations += 1
                         self.investigated = officer.get_path()
                         #####################################################
-                                            
+                    
                         #VISUAL##############################################
                         print 'Investigate'
                         self.ptree.visual(PU = self)
@@ -1338,25 +1128,14 @@ class PoliceUnit(object):
                     
                         #####################################################
                         if officer.get_current_node() == 0:
-                            self.total_arrests += 1
                             self.root_found = True
                             #print "ROOT FOUND"
                             return
                         #####################################################
                         
                         #####################################################
-                        if self.ptree.out_degree(officer.get_current_node())==0:
-                            #leaves are not arrested
-                            
-                            #NO MORE INVESTIGATION###############################
-                            self.investigated = []
-                            #####################################################
-                        
-                            #REMOVE OFFICER######################################
-                            self.officers.remove(officer)
-                            #####################################################
-                            
-                            return
+                        if officer.get_current_node() in self.ptree.get_leaves():
+                            break
                             #print "ROOT FOUND"
                         #####################################################
                     
@@ -1366,7 +1145,6 @@ class PoliceUnit(object):
                     
                     #VISUAL##############################################
                     print 'Before arrest'
-                    self.total_arrests += 1
                     self.ptree.visual(PU = self)
                     self.ptree.timestep+=1
                     #####################################################
@@ -1390,9 +1168,6 @@ class PoliceUnit(object):
             
             #GET NEW CRIMINALS TO INVESTIGATE####################
             self.get_criminals_on_street()
-            for officer in self.get_officers():
-                self.total_investigations += 1
-                self.investigated += officer.get_path()
             #####################################################
             
             #VISUAL##############################################
@@ -1402,43 +1177,10 @@ class PoliceUnit(object):
             #####################################################
             
             for officer in self.get_officers():                   
-                if not self.cost_experiment:
-                    while(officer.get_hope() and officer.current_node != 0):
+                while(officer.get_hope() and officer.current_node != 0):
                     
-                        #INVESTIGATE#########################################
-                        officer.investigate()
-                        self.total_investigations += 1
-                        self.investigated = officer.get_path()
-                        #####################################################
-                
-                        #VISUAL##############################################
-                        print 'Investigate'
-                        self.ptree.visual(PU = self)
-                        self.ptree.timestep+=1
-                        #####################################################
-                
-                    #WHY DID THE INVESTIGATION STOP!######################
-                    if officer.get_current_node() == 0:
-                        self.total_arrests += 1
-                        self.root_found = True
-                        #print "ROOT FOUND"
-                        return
-                    else:
-                        self.investigated = []
-                        self.officers.remove(officer)
-                    #####################################################
-                
-                    #VISUAL##############################################
-                    print 'Investigation Failed :('
-                    self.ptree.visual(PU = self)
-                    self.ptree.timestep+=1
-                    #####################################################
-            else:
-                while(officer.get_current_node() != 0 and (self.ptree.out_degree(officer.get_current_node()) != 0 or len(self.investigated) == 1)):
-                    print self.ptree.out_degree(officer.get_current_node())
                     #INVESTIGATE#########################################
                     officer.investigate()
-                    self.total_investigations += 1
                     self.investigated = officer.get_path()
                     #####################################################
                 
@@ -1450,7 +1192,6 @@ class PoliceUnit(object):
                 
                 #WHY DID THE INVESTIGATION STOP!######################
                 if officer.get_current_node() == 0:
-                    self.total_arrests += 1
                     self.root_found = True
                     #print "ROOT FOUND"
                     return
@@ -1468,7 +1209,7 @@ class PoliceUnit(object):
                     
         elif self.strategy == 2:
             """
-            Only Arrest (deprecated)
+            Only Arrest
             """
             
             #INITIALIZE ATTRIBUTES################################
@@ -1478,8 +1219,6 @@ class PoliceUnit(object):
 
             #GET NEW CRIMINALS TO INVESTIGATE####################
             self.get_criminals_on_street()
-            for officer in self.get_officers():
-                self.investigated += officer.get_path()
             #####################################################
             
             #VISUAL##############################################
@@ -1539,9 +1278,6 @@ class PoliceUnit(object):
 
             #GET NEW CRIMINALS TO INVESTIGATE####################
             self.get_criminals_on_street()
-            for officer in self.get_officers():
-                self.total_investigations += 1
-                self.investigated += officer.get_path()
             #####################################################
             
             #VISUAL##############################################
@@ -1561,10 +1297,8 @@ class PoliceUnit(object):
                          ):
                         #INVESTIGATE#########################################
                         officer.investigate()
-                        self.total_investigations += 1
                         self.investigated = officer.get_path()
                         #####################################################
-                        
                         
                         #INVESTIGATION ENDS!#################################
                         if officer.investigation_must_end:
@@ -1579,26 +1313,14 @@ class PoliceUnit(object):
                     
                     #####################################################
                     if officer.get_current_node() == 0:
-                        self.total_arrests += 1
                         self.root_found = True
                         #print "ROOT FOUND"
                         return
                     #####################################################
-                    elif self.ptree.out_degree(officer.get_current_node()) == 0 and len(self.investigated) != 1: #if q ==1, then leaves will ALWAYS 
-                                                                                                                 #meet our degree threshold too so we should arrest
-                                                                                                                 #the first node we see, which will be a leaf.
-                                                
-                        #NO MORE INVESTIGATION###############################
-                        self.investigated = []
-                        #####################################################
-                        
-                        #REMOVE OFFICER######################################
-                        self.officers.remove(officer)
-                        #####################################################
                     
                     else:
                         """
-                        This strategy will either high
+                        This strategy will either remove a leaf or high
                         degree node.
                         """
                         #NO MORE INVESTIGATION###############################
@@ -1606,7 +1328,6 @@ class PoliceUnit(object):
                         #####################################################
                         
                         #BEFORE ARREST#######################################
-                        self.total_arrests += 1
                         self.remove_extra_officers_before_arrest(officer)
                         #####################################################
                     
@@ -1640,7 +1361,7 @@ class PPTree(object):
         (1)  PoliceUnit reaches the root (PoliceUnit wins)
         (2)  The ptree reaches its maximum allowable nodes (ptree wins)
     """
-    def __init__(self,  arrival_parameters = (20, ), max_allowable_nodes = 100, seed = (3,2), strategy = 0, officers_sent_out = 1, max_number_of_allowed_rounds = 1000, degree_threshold = None, tree_type = PTree, number_of_investigations_for_strategy_SI = 1, cost_experiment = False):
+    def __init__(self,  arrival_parameters = (2, ), max_allowable_nodes = 100, seed = (3,2), strategy = 0, officers_sent_out = 1, max_number_of_allowed_rounds = 2000, degree_threshold = None, tree_type = PTree, number_of_investigations_for_strategy_SI = 1):
         """
         --------------------------------------------------------------------------
         Input:
@@ -1670,11 +1391,9 @@ class PPTree(object):
                              strategy = strategy,\
                              officers_sent_out = officers_sent_out,\
                              degree_threshold = degree_threshold,\
-                             number_of_investigations_for_strategy_SI = number_of_investigations_for_strategy_SI,\
-                             cost_experiment = cost_experiment)
+                             number_of_investigations_for_strategy_SI = number_of_investigations_for_strategy_SI)
         self.max_number_of_allowed_rounds = max_number_of_allowed_rounds
-        self.round_number = 1
-        
+    
     
     #MOVES############################################################################
     def growth_and_pursuit(self):
@@ -1689,12 +1408,27 @@ class PPTree(object):
         Description:
             This grows the graph while the PoliceUnit pursues the root.
         """
-        while (self.PU.root_found != True and self.PT.number_of_nodes() < self.PT.get_max_allowable_nodes() and self.round_number <= self.max_number_of_allowed_rounds):
+        k = 0
+        old_max_heights = (0, )*2
+        old_number_of_nodes = 0
+        old_graph = self.PT.copy()
+        while (self.PU.root_found != True and self.PT.number_of_nodes() < self.PT.get_max_allowable_nodes() and k <= self.max_number_of_allowed_rounds):
             self.PU.go_for_root()
             if self.PU.root_found == True:
                 break
             self.PT.add_nodes()
-            self.round_number += 1
+            if (self.PT.max_height, )*2 == old_max_heights:
+                if self.PT.number_of_nodes() == old_number_of_nodes:
+                    if nx.is_isomorphic(old_graph, self.PT):
+                        self.PU.root_found = True
+                        #print 'Root Found'
+                        break
+                
+            else:
+                old_max_heights = (self.PT.max_height, old_max_heights[0])
+                old_number_of_nodes = self.PT.number_of_nodes()
+                old_graph = self.PT.copy()
+            k += 2
     ##################################################################################
             
     #VISUALS##########################################################################  
@@ -1703,19 +1437,39 @@ class PPTree(object):
         See growth_and_pursuit()!  Same onkly with visuals()
         """
         self.PT.seed_visual()
-        while (self.PU.root_found != True and self.PT.number_of_nodes() < self.PT.get_max_allowable_nodes() and self.round_number <= self.max_number_of_allowed_rounds):
+        k = 0
+        old_max_heights = (0, 0, 0)
+        old_number_of_nodes = 0
+        old_graph = self.PT.copy()
+        while (self.PU.root_found != True and self.PT.number_of_nodes() < self.PT.get_max_allowable_nodes() and k <= self.max_number_of_allowed_rounds):
             self.PU.go_for_root_with_visuals()
             if self.PU.root_found == True:
                 break
-            self.PT.add_nodes_with_visuals()                
-            self.round_number
+            self.PT.add_nodes_with_visuals()
+            if (self.PT.max_height, )*2 == old_max_heights:
+                if self.PT.number_of_nodes() == old_number_of_nodes:
+                    if nx.is_isomorphic(old_graph, self.PT):
+                        self.PU.root_found = True
+                        #print 'Root Found'
+                        break
+            else:
+                old_max_heights = (self.PT.max_height, old_max_heights[0])
+                old_number_of_nodes = self.PT.number_of_nodes()
+                old_graph = self.PT.copy()
+            k+=2
     ##################################################################################
-
+        
+   
+   
+   
 ##########################################################################################################################################################################    
 
-if __name__== "__main__":  
-    game = PPTree(max_allowable_nodes = 5000)
-    cProfile.run('game.growth_and_pursuit()')
+
+if __name__== "__main__":
+    game = PPTree()
+    game.growth_and_pursuit_with_visuals()
+    
+    
     
 
     

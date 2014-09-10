@@ -1,0 +1,44 @@
+Strategies For PoliceUnit Class
+
+#################################################################################
+
++++ strategy = 0:
+
+* Parameter in code: self.number_of_investigations_for_strategy_SI (Default = 4)
+* Name in Paper: S_A(p)
+* Parameter in paper: p
+
+We move the officer p-times and then arrest the node she arrives.  If she arrives at a leaf before the p-th investigation.  She ends the process empty-handed.  We choose not to arrest the leaf so that this strategy approaches strategy 1.
+
+#################################################################################
+
++++ strategy = 1:
+
+* Name in Paper: S_I
+* Parameter in code: Not applicable
+* Parameter in paper: Not applicable
+
+
+We move the officer until she cannot move any more.  She is deemed successful if she finds herself at any point on her walk at the root.  She is deemed unsuccessful if she ends up another leaf.  Her walk is self-avoiding, so the moment she chooses a child of a node instead of its parent, we can stop the process.
+
+#################################################################################
+
++++ strategy = 2:
+
+* This problem is deprecated and is subsumed by strategy 0 simply by setting p = 0.
+
+The officer simply arrest the first node she sees.  Very aggressive, indeed!
+
+#################################################################################
+
++++ strategy = 3:
+
+* Name in Paper: S_D(q)
+* Parameter in code: self.degree_threshold (Default = 4)
+* Parameter in paper: q
+
+Default Degree_Threshold = 4
+
+We move the officer until she reaches a node of a certain degree, at which point she arrests the node he is currently at, which has degree bigger than some threshold.  There is a chance her high standards for arrests lead her to the root, at which point the investigation stops and the game complete.  If her search for a high degree node fails in the true sense, then she will end up at a leaf and arrest this leaf.
+
+#################################################################################
