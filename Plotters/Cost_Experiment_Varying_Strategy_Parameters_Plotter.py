@@ -31,12 +31,15 @@ shapes = ['>', 's', 'o', '^', 'd', 'p'] *100
 
 ###############################################################################################################################################################
 if strategy == 0:
-    parameter_variable = 'p'
+    parameter_variable = 'p ='
+elif strategy == 3:
+    parameter_variable = 'q ='
 else:
-    parameter_variable = 'q'
+    parameter_variable = 'S_I'
 matplotlib.rc('font', **font)
 ###############################################################################################################################################################
 
+print strategy
 ###############################################################################################################################################################
 file = open('Cost_Experiment_Strategy_%d_Varying_Strategy_Parameters.pkl'%strategy, 'rb')
 data = pickle.load(file)
@@ -66,16 +69,21 @@ max_prob = 0
 min_prob = 1
 ###############################################################################################################################################################
 print data.keys()
-for kk, seed in enumerate(sorted(data.keys())):
+for kk, parameter in enumerate(sorted(data.keys())):
+    
+    if strategy ==1:
+        parameter_to_string = ''
+    else:
+        parameter_to_string = str(parameter)
     
     ###############################################################################################################################################################
     if kk != 0: #and kk != 1:
         continue
-    print seed
+    print parameter
     ###############################################################################################################################################################
     
     ###############################################################################################################################################################
-    probability_of_wins_list = data[seed]['probability_of_wins_list']
+    probability_of_wins_list = data[parameter]['probability_of_wins_list']
     if max_prob < max(probability_of_wins_list):
         max_prob = max(probability_of_wins_list)
     if min_prob > min(probability_of_wins_list):
@@ -83,15 +91,15 @@ for kk, seed in enumerate(sorted(data.keys())):
     ###############################################################################################################################################################
     
     ###############################################################################################################################################################
-    arrival_interval_all         = [k[0] for k in data[seed]['arrival_interval']]
-    mean_number_of_rounds        = [np.mean(x) for x in data[seed]['number_of_rounds_list']]
+    arrival_interval_all         = [k[0] for k in data[parameter]['arrival_interval']]
+    mean_number_of_rounds        = [np.mean(x) for x in data[parameter]['number_of_rounds_list']]
     colors_all                   = probability_of_wins_list
     ###############################################################################################################################################################
     
     ###############################################################################################################################################################
-    arrival_interval_when_won      = [k[0] for index, k in enumerate(data[seed]['arrival_interval']) if data[seed]['number_of_rounds_list_when_won'][index] != []]
-    mean_number_of_rounds_when_won = [np.mean(x) for x in data[seed]['number_of_rounds_list_when_won'] if x != []]
-    colors_won                     = [x for index, x in  enumerate(probability_of_wins_list) if data[seed]['number_of_rounds_list_when_won'][index] != []]
+    arrival_interval_when_won      = [k[0] for index, k in enumerate(data[parameter]['arrival_interval']) if data[parameter]['number_of_rounds_list_when_won'][index] != []]
+    mean_number_of_rounds_when_won = [np.mean(x) for x in data[parameter]['number_of_rounds_list_when_won'] if x != []]
+    colors_won                     = [x for index, x in  enumerate(probability_of_wins_list) if data[parameter]['number_of_rounds_list_when_won'][index] != []]
     """
     We avoid plotting if there are no wins.
     """
@@ -102,9 +110,9 @@ for kk, seed in enumerate(sorted(data.keys())):
     ###############################################################################################################################################################
     
     ###############################################################################################################################################################
-    arrival_interval_when_lost                = [k[0] for index, k in enumerate(data[seed]['arrival_interval']) if data[seed]['number_of_rounds_list_when_lost'][index] != []]
-    mean_number_of_rounds_when_lost           = [np.mean(x) for x in data[seed]['number_of_rounds_list_when_lost'] if x != []]
-    colors_lost                               =[x for index, x in  enumerate(probability_of_wins_list) if data[seed]['number_of_rounds_list_when_lost'][index] != []]
+    arrival_interval_when_lost                = [k[0] for index, k in enumerate(data[parameter]['arrival_interval']) if data[parameter]['number_of_rounds_list_when_lost'][index] != []]
+    mean_number_of_rounds_when_lost           = [np.mean(x) for x in data[parameter]['number_of_rounds_list_when_lost'] if x != []]
+    colors_lost                               =[x for index, x in  enumerate(probability_of_wins_list) if data[parameter]['number_of_rounds_list_when_lost'][index] != []]
     """
     We avoid plotting if there are no losses.
     """
@@ -115,9 +123,9 @@ for kk, seed in enumerate(sorted(data.keys())):
     ###############################################################################################################################################################
     
     ###############################################################################################################################################################
-    mean_number_of_investigations_and_arrests             = [np.mean(x) for x in data[seed]['number_of_investigations_and_arrests_list']]
-    mean_number_of_investigations_and_arrests_when_won    = [np.mean(x) for x in data[seed]['number_of_investigations_and_arrests_list_when_won'] if x != []]
-    mean_number_of_investigations_and_arrests_when_lost   = [np.mean(x) for x in data[seed]['number_of_investigations_and_arrests_list_when_lost'] if x != []]
+    mean_number_of_investigations_and_arrests             = [np.mean(x) for x in data[parameter]['number_of_investigations_and_arrests_list']]
+    mean_number_of_investigations_and_arrests_when_won    = [np.mean(x) for x in data[parameter]['number_of_investigations_and_arrests_list_when_won'] if x != []]
+    mean_number_of_investigations_and_arrests_when_lost   = [np.mean(x) for x in data[parameter]['number_of_investigations_and_arrests_list_when_lost'] if x != []]
     ###############################################################################################################################################################
     
     
@@ -129,17 +137,17 @@ for kk, seed in enumerate(sorted(data.keys())):
     ARRESTS + INVESTIGATIONS
     """
     shape = shapes.pop(0)
-    plt.scatter(arrival_interval_all, mean_number_of_investigations_and_arrests,  marker = shape, alpha = .5, c = colors_all, cmap = cm.PuBu, vmin = min_prob, vmax = max_prob, label = r'$(H, D) =%s$'%str(seed)+'\n'+r'(All)')
+    plt.scatter(arrival_interval_all, mean_number_of_investigations_and_arrests,  marker = shape, alpha = .5, c = colors_all, cmap = cm.PuBu, vmin = min_prob, vmax = max_prob, label = r'$%s%s$'%(parameter_variable, parameter_to_string)+'\n'+r'(All)')
     ax.plot(arrival_interval_all, mean_number_of_investigations_and_arrests)
     
     if winning:
         shape = shapes.pop(0)
-        plt.scatter(arrival_interval_when_won, mean_number_of_investigations_and_arrests_when_won,  marker = shape, alpha = .5, c = colors_won, cmap = cm.PuBu, vmin = min_prob, vmax = max_prob, label = r'$(H, D) =%s$'%str(seed)+'\n'+r'(Won)')
+        plt.scatter(arrival_interval_when_won, mean_number_of_investigations_and_arrests_when_won,  marker = shape, alpha = .5, c = colors_won, cmap = cm.PuBu, vmin = min_prob, vmax = max_prob, label = r'$%s%s$'%(parameter_variable, parameter_to_string)+'\n'+r'(Won)')
         ax.plot(arrival_interval_when_won, mean_number_of_investigations_and_arrests_when_won)
     
     if loosing:
         shape = shapes.pop(0)
-        plt.scatter(arrival_interval_when_lost, mean_number_of_investigations_and_arrests_when_lost,  marker = shape, alpha = .5, c = colors_lost, cmap = cm.PuBu, vmin = min_prob, vmax = max_prob, label = r'$(H, D) =%s$'%str(seed)+'\n'+r'(Lost)')
+        plt.scatter(arrival_interval_when_lost, mean_number_of_investigations_and_arrests_when_lost,  marker = shape, alpha = .5, c = colors_lost, cmap = cm.PuBu, vmin = min_prob, vmax = max_prob, label = r'$%s%s$'%(parameter_variable, parameter_to_string)+'\n'+r'(Lost)')
         ax.plot(arrival_interval_when_lost, mean_number_of_investigations_and_arrests_when_lost)
     ###############################################################################################################################################################
     
@@ -171,5 +179,5 @@ ax.set_position([box.x0, box.y0, box.width * 0.7, box.height])
 ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
 ###############################################################################################################################################################
 
-filename_for_pdf = '/'+'Cost_Experiment_Strategy_%d_Varying_Initial_Network.pdf'%int(strategy)
+filename_for_pdf = '/'+'Cost_Experiment_Strategy_%d_Varying_Strategy_Parameters.pdf'%int(strategy)
 plt.savefig( os.getcwd() + filename_for_pdf , format="pdf" )
