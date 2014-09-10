@@ -32,6 +32,6 @@ This is the driver that collects stats on the Dynamic Game, which is a combinati
 We investigate these properties with respect to the different strategies the Police have.  Again, we vary the parameters to refine
 our understanding of the properties above and the individual strategies.
 
-GrowthForCluster1.py/GrowthForCluster2.py/PursuitForCluster1.py/PursuitForCluster2.py
+[Growth,Pursuit]ForCluster[1,2].py
 ================================================================================================================================
-These are the jobs run on the school cluster.  Mainly here for record.
+These are the jobs run on the school cluster.  Mainly here for the record of what will be included in the report.
