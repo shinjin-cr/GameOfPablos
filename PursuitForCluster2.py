@@ -28,7 +28,7 @@ The clusters as school are dual quad-cores--that means 8 jobs can be run in para
 clustering                       = True
 processes = []
 max_allowable_nodes              = 3000 #!!!!!!!!!!!!!
-number_of_experiments            = 1000 #!!!!!!!!!!!!!
+number_of_experiments            = 10000 #!!!!!!!!!!!!!
 max_number_of_allowed_rounds     = 7000 #!!!!!!!!!!!!!
 min_arrival_parameter            = 2
 max_arrival_parameter            = 50   #!!!!!!!!!!!!!
