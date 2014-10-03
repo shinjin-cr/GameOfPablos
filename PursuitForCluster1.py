@@ -29,7 +29,7 @@ clustering                       = True
 
 processes = []
 max_allowable_nodes              = 3000
-number_of_experiments            = 100
+number_of_experiments            = 1000
 max_number_of_allowed_rounds     = 7000
 
 #######################################################################################################################################################################

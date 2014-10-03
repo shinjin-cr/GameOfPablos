@@ -957,7 +957,7 @@ def cost_experiment_varying_initial_network(**kwargs):
                 
                 #THE DUMP!################################################################################
                 probability_of_wins_list[index] = number_of_wins_list[index]/(i+1)
-                data[seed]  = {'probability_of_wins_list': probability_of_wins_list,\
+                data[seed]  = {    'probability_of_wins_list': probability_of_wins_list,\
                                    'arrival_interval': arrival_interval, \
                                    'number_of_rounds_list': number_of_rounds_list , \
                                    'number_of_rounds_list_when_won': number_of_rounds_list_when_won, \
@@ -965,7 +965,7 @@ def cost_experiment_varying_initial_network(**kwargs):
                                    'number_of_investigations_and_arrests_list': number_of_investigations_and_arrests_list,\
                                    'number_of_investigations_and_arrests_list_when_won': number_of_investigations_and_arrests_list_when_won,\
                                    'number_of_investigations_and_arrests_list_when_lost': number_of_investigations_and_arrests_list_when_lost\
-                                  }
+                             }
                 file = open('Cost_Experiment_Strategy_%d_Varying_Initial_Network.pkl' %strategy, 'wb')
                 pickle.dump(data, file)
                 file.close()

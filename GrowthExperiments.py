@@ -915,7 +915,8 @@ def node_density_varying_maximum_number_of_nodes_experiment(**kwargs):
             +'Max Allowable Nodes Interval: %s \n'%str(max_allowable_nodes_interval)\
             +'Arrival_Distribution: %s\n'%arrival_distribution.__name__\
             +'Preference: %s\n'% preference.__doc__\
-            +'Arrival parameters: %s\n\n'%str(arrival_parameters)\
+            +'Arrival parameters: %s\n'%str(arrival_parameters)\
+            +'Seed: %s\n\n'%str(seed)\
             +'Regarding ND.pkl file:\n'\
             +'This returns a dictionary:\n'\
             +'arrival_rate (key/int)---------> (ND_dict, ND_data_list) (value/tuple of a dict and list respectively)\n\n'\

@@ -3,7 +3,7 @@
 *.pyc
 *.aux
 *.log
-*.gz≈
+*.gz
  
 #Ignore Directories#
 Data/
@@ -20,3 +20,7 @@ MuriMeetingPoster/
 #OS Files#
 ######################
 .DS_Store
+
+#Nohup#
+######################
+nohup.out

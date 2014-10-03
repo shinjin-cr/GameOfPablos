@@ -34,6 +34,8 @@ matplotlib.rc('font', **font)
 
 file = open('Beat_Experiment_Strategy_%d_Varying_Initial_Network.pkl'%strategy, 'rb')
 data = pickle.load(file)
+file.close()
+
 t = plt.title(r'Strategy %s'%strategy_to_latex_dictionary[strategy])#, fontsize = 35)
 t.set_y(1.02)
 plt.ylim(-.05, 1.05)
