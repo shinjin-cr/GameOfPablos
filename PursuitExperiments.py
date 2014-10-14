@@ -1,19 +1,20 @@
+#!/usr/bin/python
+from GrowthExperiments import *
+from PTree import *
+from numpy.random import binomial
+from numpy.random import poisson as pois
+from random import choice 
+#from sympy import Eq, Symbol, solve, nsolve
+from sys import argv
+import datetime
+#import matplotlib.pyplot as plt
+import networkx as nx
 import numpy as np
 import os
-#import matplotlib.pyplot as plt
-from random import choice 
-from numpy.random import binomial
-#from sympy import Eq, Symbol, solve, nsolve
-import datetime
-import random
-import networkx as nx
-from PTree import *
-from GrowthExperiments import *
-from numpy.random import poisson as pois
 import pickle
-import shutil
 import profile
-
+import random
+import shutil
 
 ###########################################################################################################################################################################################
 """
@@ -971,5 +972,9 @@ def cost_experiment_varying_initial_network(**kwargs):
                 file.close()
                 #########################################################################################
 if __name__=='__main__':
-    cost_experiment_varying_initial_network()      
+    if (len(argv) == 3):
+        print("Starting experiment %s with parameters from %s" % tuple(argv[1:3]))
+        locals()[argv[1]](**pickle.load(open(argv[2])))
+    else:
+        cost_experiment_varying_initial_network()      
         
